@@ -50,22 +50,29 @@ class grass(Block):
             pass
 
 class log(Block):
-    hasUp = False
+    hasUp = True
     def __init__(self):
         super().__init__("log", True, 4)
     def update(pos, world):
-        pass
+        if world[(pos[0],pos[1]+1)].type == "air":
+            world[pos] = air()
 
 class leaves(Block):
     hasUp = True
     def __init__(self):
         super().__init__("leaves", False, 2)
     def update(pos, world):
-        #If not touching a log
-        try:
-            if not ( world[pos[0]-1,pos[1]].type == "log" or world[pos[0],pos[1]-1].type == "log" or world[pos[0]+1,pos[1]].type == "log" or world[pos[0],pos[1]+1].type == "log" ):
-                world[pos] = air()
-        except:
+        tlN = 0
+        tl = False
+        for xM in range(-1,2):
+            for yM in range(-2,3):
+                try:
+                    if world[pos[0]+xM,pos[1]+yM].type == "log":
+                        tlN += 1
+                except:
+                    pass
+        if tlN > 0: tl = True
+        if not tl:
             world[pos] = air()
 
 if __name__ == "__main__":

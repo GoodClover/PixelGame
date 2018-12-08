@@ -11,6 +11,7 @@ seed = random.randint(0,999999)
 worldWidth =50
 worldHeight = 50
 performance = 1 # 1 is normal, 2 for larger worlds and higher
+shaders = False #Verry slow
 #Options-------------------#
 
 WIDTH = 8*worldWidth
@@ -125,11 +126,11 @@ def draw():
             for y in range(0,worldHeight):
                 if world[(x,y)].type != "air":
                     screen.blit(world[(x,y)].type +".png",(x*8,y*8))
-                    for i in range(1,world[(x,y)].darkness):
-                        screen.blit("darkness.png",(x*8,y*8))
+                    if shaders:
+                        for i in range(1,world[(x,y)].darkness): screen.blit("darkness.png",(x*8,y*8))
     player.draw()
     screen.draw.text(str(inventory),(10,10))
-    screen.draw.text(str(selBlock),(10,30))
+    screen.draw.text(str(selBlockStr),(10,30))
     
 
 def update(dt):
@@ -173,9 +174,15 @@ def update(dt):
         pXVel = 0
         pYVel = 0
 
+    if keys.R in thatKey:
+        for bX in range(0,worldWidth):
+            for bY in range(0,worldHeight):
+                removeBlock(bX*8,bY*8)
+
 def on_key_down(key):
     global thatKey
     thatKey.append(key)
+            
 
 def on_key_up(key):
     global thatKey
@@ -186,22 +193,17 @@ def on_key_up(key):
 def tick(x,y):
     global world
     exec("""if blocks."""+world[(x,y)].type+""".hasUp == True: \n    blocks."""+ world[(x,y)].type +""".update((x,y),world)""")
-    if world[(x,y)].type == "log":
-        if not getWorld(x,y+1):
-            removeBlock(x*8,y*8)
 
             
 def tickAll():
     global taX
     currentDark = 0
-    for taY in range(worldHeight-1,0,-1):
+    for taY in range(0,worldHeight):
         if getattr(blocks, world[(taX,taY)].type).hasUp == True:
             tick(taX,taY)
         world[(taX,taY)].darkness = currentDark
         if world[(taX,taY)].solid:
             currentDark += 1
-        else:
-            currentDark = 0
     taX += 1
     if taX == worldWidth: taX = 0
 
@@ -220,6 +222,7 @@ def isCollide(x,y,xB,yB):
 def on_mouse_down(button,pos):
     global selNo
     global selBlock
+    global selBlockStr
     global blocksAmt
     if button == mouse.LEFT:
         addBlock(pos[0],pos[1])
