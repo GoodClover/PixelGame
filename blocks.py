@@ -75,6 +75,29 @@ class leaves(Block):
         if not tl:
             world[pos] = air()
 
+class water(Block):
+    hasUp = True
+    def __init__(self):
+        super().__init__("water", False, 4) #Not Solid
+    def update(pos, world):
+        try:
+            if world[pos[0],pos[1]+1].type != "water":
+                if world[pos[0],pos[1]+1].type == "air":
+                    world[pos[0], pos[1]+1] = water()
+                elif world[pos[0]+1,pos[1]].type == "air":
+                    world[pos[0]+1, pos[1]] = water()
+                elif world[pos[0]-1,pos[1]].type == "air":
+                    world[pos[0]-1, pos[1]] = water()
+        except:
+            pass
+
+
+
+
+
+
+
+
 if __name__ == "__main__":
     print("""
 ================================================

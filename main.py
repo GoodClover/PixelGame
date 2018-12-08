@@ -1,8 +1,7 @@
-import time
 import pgzrun
 import random
-import threading
 
+#from functions import *
 import blocks
 from blocks import Block
 
@@ -25,13 +24,13 @@ taY = worldHeight-1
 
 thatKey = []
 
-blocksStr = ["dirt","grass","log","leaves"]
-blocksClass = [blocks.dirt,blocks.grass,blocks.log,blocks.leaves]
+blocksStr = ["dirt","grass","log","leaves","water"]
+blocksClass = [blocks.dirt,blocks.grass,blocks.log,blocks.leaves,blocks.water]
 blocksAmt = len(blocksStr)-1
-selNo = 0
-selBlock = blocks.dirt
-selBlockStr = "dirt"
-inventory = {"dirt":0,"grass":0,"log":0,"leaves":0}
+selNo = 4
+selBlock = blocks.water
+selBlockStr = "water"
+inventory = {"dirt":0,"grass":0,"log":0,"leaves":0,"water":10}
 
 player = Actor("player") #Uses the pixel co-ords
 player.left = 0
