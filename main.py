@@ -178,10 +178,15 @@ def draw():
         screen.blit("air_meter.png", (8+i, 18))
     if cursorBox and not menuOpen:                               #Cursor
         screen.blit("cursor_box", (mousePos[0]-6, mousePos[1]-6))
-    else:
-        screen.blit("cursor", (mousePos[0]-6, mousePos[1]-6))
     if zoomWindow and not menuOpen:
-        screen.blit("zoom_window", (mousePos[0]+6, mousePos[1]-6-32)) #(mousePos[0]+6+2, mousePos[1]-6-32+2) #The area is 8x8 -> 28x28
+        screen.blit("zoom_window", (mousePos[0]+6+1, mousePos[1]-6-32)) #The area is 8x8 -> 32x32
+        preZoomSurface = pygame.Surface((8,8))
+        zoomSurface = pygame.Surface((32,32))
+        preZoomSurface.blit(screen.surface, (0,0), (mousePos[0]-4, mousePos[1]-4, 8, 8) )
+        zoomSurface.blit(pygame.transform.scale( preZoomSurface, (32,32) ), (0,0))
+        screen.blit(zoomSurface, (mousePos[0]+6+3, mousePos[1]-6-32+2))
+    screen.blit("cursor", (mousePos[0]-6, mousePos[1]-6))
+
     screen.draw.text("FPS: "+str(int(fps)), (8, 46), FONT, FONT_SIZE, color=FONT_COLOUR)      #FPS
     #screen.blit("debug", (int(player.left-scrollX), int(player.top-scrollY)))
 
@@ -209,6 +214,7 @@ def update(dt):
     global groundItems
     global facingLeft
     global clouds
+    global zoomWindow
 
     t += dt
     f += 1
@@ -283,7 +289,6 @@ def update(dt):
         pXVel += 0.25*dt
         facingLeft = False
         if isSolid(world, (player.left+4)//8, (player.top+16)//8):
-            
             dustParticles.append( ((scrollX+WIDTH/2)+random.randint(-2,6), (scrollY+HEIGHT/2)+14, 50, pXVel, screen.surface.get_at((int(player.left-scrollX+4), int(player.top-scrollY+17)))[:3] ))
     
     if not noGrav:
@@ -352,6 +357,9 @@ def update(dt):
         for i in range(0,howMany):
             inventory = craft(toCraft, inventory)
 
+    if keys.LSHIFT in thatKey and menuOpenDelay <= 0:
+        menuOpenDelay = 0.2
+        zoomWindow = not zoomWindow
 
     if keys.O in thatKey:                                           #Save/Load worlds --
         worldName = "Test_World"
