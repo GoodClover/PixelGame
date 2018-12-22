@@ -1,6 +1,7 @@
 # I am planning to move all the functions into here, 
 # so they can be imported into other files like blocks.py easily.
 import random
+from copy import deepcopy
 
 try: from blocks import Block
 except: pass
@@ -42,27 +43,47 @@ def getWorldLit(world, x, y): #X, Y in blocks not pixels
     except:
         return blocks.dirt()
 
-def tick(world, x, y, inventory):
-    if getattr(blocks, world[(x, y)].type).hasUp:
-        world = getattr(blocks, world[(x, y)].type).update((x, y), world)#, inventory)
-    return world
+def tick(world, x, y, inventory, groundItems):
+    if getattr(blocks, getWorldType(world, x, y)).hasUp:
+        world, groundItems = getattr(blocks, getWorldType(world, x, y)).update((x, y), world, groundItems)#, inventory)
+    return world, groundItems
 
 def addBlock(world, inventory, selBlockStr, x, y):
-    x = x//8
-    y = y//8
     if not getWorld(world, x, y) and inventory[selBlockStr] > 0:
         inventory[selBlockStr] -= 1
         world[(x, y)] = getattr(blocks, selBlockStr)()
 
-def removeBlock(world, inventory, x, y):
-    x = x//8
-    y = y//8
+
+class groundItem():
+    def __init__(self,pos=(0,0),itemType="dirt"):
+        self.pos = pos
+        self.type = itemType
+
+def removeBlock(world, groundItems, x, y):
     if world[(x, y)].type != "air":
-        inventory[ getWorldType(world, x, y) ] += 1
+        groundItems.append( groundItem( ( (x*8)+random.randint(-4,4), (y*8)+random.randint(-4,4), ), getWorldType(world,x,y)) )
         world[(x, y)] = blocks.air()    
 
-
-#Trees-
+recipies = {
+    "tap":["ore","ore","log"],
+    "planks":["log"],
+    "wall":["planks"],
+    "chest":["planks","planks","planks"],
+    "ladders":["planks"],
+}
+def craft(toCraft, inventory):
+    toCraft=toCraft.lower()
+    canCraft = True
+    imagInv = deepcopy(inventory)
+    for reqItem in recipies[toCraft]:
+        if imagInv[reqItem] <= 0:
+            canCraft = False
+        imagInv[reqItem] -= 1
+    if canCraft:
+        for reqItem in recipies[toCraft]:
+            inventory[reqItem] -= 1
+        inventory[toCraft] += 1
+    return inventory
 
 def tree(world, pos):
     highestYMod = 0

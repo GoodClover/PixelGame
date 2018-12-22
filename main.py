@@ -2,11 +2,17 @@ import os
 try:
     import pygame
     import pgzrun
+    import pickle
+    import easygui
 except:
-    print("Can't find libraries! Installing now.")
+    print("\nCan't find libraries! Installing now.\n")
     os.system("pip3 install pgzero")
+    os.system("pip3 install pickle")
+    os.system("pip3 install easygui")
     import pygame
     import pgzrun
+    import pickle
+    import easygui
 import random
 
 from functions import *
@@ -16,24 +22,30 @@ import menus
 import entities
 
 #Options------------------------#
-seed = random.randint(0, 999999)
-worldWidth  = 50
+seed = random.randint(0, 999999)#input("Seed:")
+worldWidth  = 200
 worldHeight = 50
 shaders = False #Very slow
+HEIGHT = 300 #If the games slow change this e.g 1080 is 1080p
+drawBG = True
+rowsPerUpdate = 30
 cursorBox = True
 drawAir = False #Ugly
+scroll = True
+noGrav = False
+topHat = True
+zoomWindow = True
 #Options------------------------#
 
-WIDTH = 8*worldWidth
-HEIGHT = 8*worldHeight
-TITLE = "Sandbox game"
+WIDTH = (HEIGHT//9)*16
+TITLE = "PixelGame - Oliver Simmons"
 ICON = "icons/devIcon.png"
 
-FONT, FONT_SIZE = "pocket_pixel", 16
-
-menu = menus.testMenu()
+FONT, FONT_SIZE, FONT_COLOUR = "pocket_pixel", 16, (25, 25, 25)
 
 pygame.mouse.set_visible(False)
+
+menu = menus.testMenu()
 
 t = 0
 f = 0
@@ -45,13 +57,34 @@ fpsF = 0
 taX = 0
 taY = worldHeight-1
 
+dustParticles = []
+clouds = []
+for i in range(0,WIDTH//40):
+    clouds.append( ( random.randint(-59,WIDTH), random.randint(0,HEIGHT//1.5), random.randint(1,5)/10 ) )
+
 menuOpen = False
 menuOpenDelay = 0
 
 mousePos = (0, 0)
 thatKey = []
 
-blocksStr = ["dirt", "stone", "ore", "grass", "sand", "log", "leaves", "water", "tap", "flower"] #All types of block need to be in here!!!
+blocksStr = [
+    "dirt",
+    "stone",
+    "ore",
+    "grass",
+    "sand",
+    "log", 
+    "planks",
+    "wall",
+    "ladders",
+    "chest",
+    "leaves",
+    "tap",
+    "water",
+    "flower",
+    "top_hat",
+    ] #All types of block need to be in here!!!
 blocksClass = []
 for item in blocksStr:
     blocksClass.append(getattr(blocks, item))
@@ -59,39 +92,83 @@ blocksAmt = len(blocksStr)-1
 selNo = 0
 selBlock = blocks.dirt
 selBlockStr = "dirt"
+
 inventory = {}
 for item in blocksStr:
     try: inventory[item]
     except KeyError:
         inventory[item] = 0
 
+groundItems = []
+groundItems.append(groundItem((8,8),"top_hat"))
+
 player = Actor("player") #Uses the pixel co-ords
-player.left = 0
-player.top = -0.45
+player.left = (worldWidth*8)/2
+player.top = 0
 pHealth = 8
 pAir = 8
 pXVel = 0
 pYVel = 0
 jumpT = 10
 
+scrollX = 0
+scrollY = 0
+
 grav = 0.5
 res = 0.9
+
+facingLeft = True
 
 #Main game --
 def draw():
     screen.fill((102, 191, 255))
+    if drawBG:
+        screen.blit("sun", (0,0))
+        for cloud in clouds:
+            screen.blit("cloud", (cloud[0], cloud[1]) )
     if not menuOpen:
         for x in range(0, worldWidth):
             for y in range(0, worldHeight):
                 if drawAir or world[(x, y)].type != "air":
-                    screen.blit(world[(x, y)].type, (x*8, y*8))
-                if shaders:                                        #Shaders
-                    for i in range(1, world[(x, y)].darkness//3):
-                        screen.blit("darkness", (x*8, y*8))
-        player.draw()                                              #Player
+                    if ((y*8)-scrollY > -8) and ((y*8)-scrollY < HEIGHT+8):
+                        if ((x*8)-scrollX > -8) and ((x*8)-scrollX < WIDTH+8):
+                            screen.blit(world[(x, y)].type, ( (x*8)-scrollX, (y*8)-scrollY) )
+                            if world[(x, y)].durability < world[(x, y)].maxDurability and world[(x, y)].durability >= 0:
+                                screen.blit("dura"+str(world[(x, y)].durability), ( (x*8)-scrollX, (y*8)-scrollY) )
+                            if shaders:                                        #Shaders
+                                for i in range(1, world[(x, y)].darkness//3):
+                                    screen.blit("darkness", ( (x*8)-scrollX, (y*8)-scrollY) )
+
+        for dust in dustParticles:
+            pos = (dust[0]-scrollX, dust[1]-scrollY)
+            screen.draw.line(pos, pos, dust[4])
+
+        for gItem in groundItems:
+            screen.blit(gItem.type, (gItem.pos[0]-scrollX, gItem.pos[1]-scrollY) ) 
+
+        #player.draw()                                              #Player
+        if pXVel <= 0:
+            if getWorldType(world, (player.left+4)//8, (player.top+17)//8) == "air":
+                screen.blit("player-j", (player.left-scrollX-1, player.top-scrollY-1))
+            elif getWorldType(world, (player.left+4)//8, (player.top+17)//8) == "water":
+                screen.blit("player-s", (player.left-scrollX-1, player.top-scrollY-1))
+            else: screen.blit("player", (player.left-scrollX-1, player.top-scrollY-1))
+            screen.blit("arms", (player.left-scrollX-3-1, player.top-scrollY-1))
+            if round(t,1) % 3 == 0: screen.blit("eyelid", (player.left-scrollX-1, player.top-scrollY-1))
+        elif pXVel > 0:
+            if getWorldType(world, (player.left+4)//8, (player.top+17)//8) == "air":
+                screen.blit("player-r-j", (player.left-scrollX-1, player.top-scrollY-1))
+            elif getWorldType(world, (player.left+4)//8, (player.top+17)//8) == "water":
+                screen.blit("player-r-s", (player.left-scrollX-8-1, player.top-scrollY-1))
+            else: screen.blit("player-r", (player.left-scrollX-1, player.top-scrollY-1))
+            screen.blit("arms", (player.left-scrollX-3-1, player.top-scrollY-1))
+            if round(t,1) % 3 == 0: screen.blit("eyelid-r", (player.left-scrollX-1, player.top-scrollY-1))
+        if inventory["top_hat"] == 1: screen.blit("top_hat", (player.left-scrollX-1, player.top-scrollY-4-1))
+
+
         screen.blit("sel_box", (6, 30))               #Selected block
         screen.blit(selBlockStr, (8, 32))
-        screen.draw.text(str(inventory[selBlockStr])+" "+selBlockStr, (22, 28), FONT, FONT_SIZE)
+        screen.draw.text(str(inventory[selBlockStr])+" "+selBlockStr, (22, 28), FONT, FONT_SIZE, color=FONT_COLOUR)
     elif menuOpen:
         screen.blit(menu.image, menu.pos)
 
@@ -103,7 +180,10 @@ def draw():
         screen.blit("cursor_box", (mousePos[0]-6, mousePos[1]-6))
     else:
         screen.blit("cursor", (mousePos[0]-6, mousePos[1]-6))
-    screen.draw.text("FPS: "+str(int(fps)), (8, 46), FONT, FONT_SIZE)      #FPS
+    if zoomWindow and not menuOpen:
+        screen.blit("zoom_window", (mousePos[0]+6, mousePos[1]-6-32)) #(mousePos[0]+6+2, mousePos[1]-6-32+2) #The area is 8x8 -> 28x28
+    screen.draw.text("FPS: "+str(int(fps)), (8, 46), FONT, FONT_SIZE, color=FONT_COLOUR)      #FPS
+    #screen.blit("debug", (int(player.left-scrollX), int(player.top-scrollY)))
 
     
 
@@ -118,12 +198,17 @@ def update(dt):
     global fps
     global fpsT
     global fpsF
-    global pXVel
-    global pYVel
+    global pXVel, pYVel
     global jumpT
     global mousePos
     global menuOpen
     global menuOpenDelay
+    global player
+    global scrollX, scrollY
+    global dustParticles
+    global groundItems
+    global facingLeft
+    global clouds
 
     t += dt
     f += 1
@@ -139,41 +224,79 @@ def update(dt):
 
     dt += 1 #Temporary so the equations work a little nicer
 
-    world, taX, inventory = tickAll(world, taX, inventory)
+    for taX in range(taX, taX+rowsPerUpdate):
+        ptaX = taX
+        if ptaX > worldWidth-1:
+            ptaX = 0
+        world,taX,inventory,groundItems = tickAll(world, ptaX, inventory, groundItems)
+
+    newDP = []
+    for dust in dustParticles:
+        if dust[3] < 0: dust = ( dust[0]+random.randint(0,2), dust[1], dust[2], dust[3], dust[4] )
+        elif dust[3] > 0: dust = ( dust[0]+random.randint(-2,0), dust[1], dust[2], dust[3], dust[4] )
+        dust = ( dust[0], dust[1]-random.randint(0,3), dust[2]-random.randint(0,3), dust[3], dust[4] )
+        if dust[2] > 0:
+            newDP.append(dust)
+    dustParticles = newDP
+
+    newClouds = []
+    for cloud in clouds:
+        if cloud[0] > WIDTH:
+            cloud = (-70, random.randint(0,HEIGHT//2), random.randint(1,5)/10)
+        newClouds.append( (cloud[0]+cloud[2], cloud[1], cloud[2]) )
+    clouds = newClouds
+
+    for gItem in groundItems: #Ground items calcs
+        if player.colliderect( Rect(gItem.pos, (8,8)) ):
+            inventory[gItem.type] += 1
+            groundItems.remove(gItem)
+        elif isSolid(world, gItem.pos[0]//8, gItem.pos[1]//8) or isSolid(world, (gItem.pos[0]+7)//8, (gItem.pos[1]+7)//8) or isSolid(world, (gItem.pos[0]+7)//8, gItem.pos[1]//8) or isSolid(world, gItem.pos[0]//8, (gItem.pos[1]+7)//8):
+            gItem.pos = (gItem.pos[0], gItem.pos[1]-1)
+        elif isSolid(world, gItem.pos[0]//8, gItem.pos[1]//8)==False and isSolid(world, (gItem.pos[0]+8)//8, (gItem.pos[1]+8)//8)==False and isSolid(world, (gItem.pos[0]+8)//8, gItem.pos[1]//8)==False and isSolid(world, gItem.pos[0]//8, (gItem.pos[1]+8)//8)==False:
+            gItem.pos = (gItem.pos[0], gItem.pos[1]+1)
 
     if pHealth <= 0:
-        for x in range(0, worldWidth):
-            for y in range(0, worldHeight):
-                world[x, y] = blocks.air()
-        pXVel, pYVel = 0, 0
+        exit()
     if pAir <= 0:
         pAir = 0
         pHealth -= 0.02
-
-    if keys.W in thatKey and jumpT < 10:
-        if getWorldType(world, (player.left+4)//8, (player.top//8)+1) == "water":
-            pYVel -= 0.2*dt
+    
+    if keys.W in thatKey:
+        if not noGrav:
+            if getWorldType(world, (player.left+4)//8, (player.top//8)+1) == "water":
+                pYVel -= 0.2*dt
+            elif getWorldType(world, (player.left+4)//8, (player.top//8)+1) == "ladders":
+                pYVel -= 0.2*dt
+            elif  jumpT < 10 or noGrav:
+                pYVel -= 0.8*dt
+                jumpT += 1
         else:
-            pYVel -= 0.8*dt
-            jumpT += 1
+            pYVel -= 0.25*dt
     if keys.S in thatKey:
         pYVel += 0.25*dt
     if keys.A in thatKey:
         pXVel -= 0.25*dt
+        facingLeft = True
+        if isSolid(world, (player.left+4)//8, (player.top+16)//8):
+            dustParticles.append( ((scrollX+WIDTH/2)+random.randint(-2,6), (scrollY+HEIGHT/2)+14, 50, pXVel, screen.surface.get_at((int(player.left-scrollX+4), int(player.top-scrollY+17)))[:3] ))
     if keys.D in thatKey:
         pXVel += 0.25*dt
+        facingLeft = False
+        if isSolid(world, (player.left+4)//8, (player.top+16)//8):
+            
+            dustParticles.append( ((scrollX+WIDTH/2)+random.randint(-2,6), (scrollY+HEIGHT/2)+14, 50, pXVel, screen.surface.get_at((int(player.left-scrollX+4), int(player.top-scrollY+17)))[:3] ))
     
-    if getWorldType(world, (player.left+4)//8, (player.top//8)+1) == "water":
-        pAir -=0.02
-        pYVel += grav*0.15
-    else:
-        pAir = 8
-        pYVel += grav
+    if not noGrav:
+        if getWorldType(world, (player.left+4)//8, (player.top//8)+1) == "water":
+            pAir -=0.02
+            pYVel += grav*0.15
+        elif getWorldType(world, (player.left+4)//8, (player.top//8)+1) == "ladders":
+            pYVel += grav*0.10
+        else:
+            pAir = 8
+            pYVel += grav
     pXVel *= res
     pYVel *= res
-
-    if pHealth <= 0:
-        pXVel, pYVel = 0, 0
 
     #Collission --
     if isCollide(world, player.left + pXVel, player.top, player.right + pXVel, player.bottom):
@@ -186,22 +309,82 @@ def update(dt):
     #Applying Vels --
     player.left += pXVel*dt
     player.top += pYVel*dt
+    if scroll:
+        scrollX = player.left-(WIDTH)/2
+        scrollY = player.top-(HEIGHT)/2
+    else:
+        scrollX = 0
+        scrollY = 0
 
     #Is Stuck check --
-    if isCollide(world, player.left, player.top, player.right, player.bottom) and thatKey != []:
+    if isCollide(world, player.left, player.top, player.right, player.bottom):
         player.left -= pXVel*1.5
         player.top -= pYVel*1.5
         pXVel = 0
         pYVel = 0
-        pHealth -= 0.1
 
     if keys.R in thatKey:
         for bX in range(0, worldWidth):
             for bY in range(0, worldHeight):
-                removeBlock(world, inventory, bX*8, bY*8)
+                removeBlock(world, groundItems, bX, bY)
+        for gItem in groundItems:
+            gItem.pos = (player.left, HEIGHT)
     if keys.E in thatKey and menuOpenDelay <= 0:
         menuOpenDelay = 0.2
         menuOpen = not menuOpen
+
+    if keys.Q in thatKey:
+        if inventory[selBlockStr] > 0 and menuOpenDelay <= 0:
+            menuOpenDelay = 0.2
+            if facingLeft:
+                groundItems.append( groundItem( (player.left-12, player.top), selBlockStr ) )
+            elif not facingLeft:
+                groundItems.append( groundItem( (player.left+12, player.top), selBlockStr ) )
+            inventory[selBlockStr] -= 1
+
+    if keys.C in thatKey and menuOpenDelay <= 0:
+        menuOpenDelay = 0.2
+        toCraft = easygui.enterbox("What to craft: ")
+        howMany = easygui.enterbox("How many: ")
+        if howMany == "":
+            howMany = 0
+        howMany = int(howMany)
+        for i in range(0,howMany):
+            inventory = craft(toCraft, inventory)
+
+
+    if keys.O in thatKey:                                           #Save/Load worlds --
+        worldName = "Test_World"
+        with open("user\\worlds\\"+worldName+"\\level.pig","rb") as file:
+            world = pickle.load(file)
+        with open("user\\worlds\\"+worldName+"\\inventory.pig","rb") as file:
+            pickledFile = pickle.load(file)
+            for type in pickledFile:
+                inventory[type] = pickledFile[type]
+        with open("user\\worlds\\"+worldName+"\\playerActorX.pig","rb") as file:
+            player.left = pickle.load(file)
+        with open("user\\worlds\\"+worldName+"\\playerActorY.pig","rb") as file:
+            player.top = pickle.load(file)
+        with open("user\\worlds\\"+worldName+"\\gItems.pig","rb") as file:
+            groundItems = pickle.load(file)
+    elif keys.P in thatKey:
+        worldName = "Test_World"
+        with open("user\\worlds\\"+worldName+"\\level.pig","wb") as file:
+            file.write(bytes())
+            pickle.dump(world, file, pickle.HIGHEST_PROTOCOL)
+        with open("user\\worlds\\"+worldName+"\\inventory.pig","wb") as file:
+            file.write(bytes())
+            pickle.dump(inventory, file, pickle.HIGHEST_PROTOCOL)
+        with open("user\\worlds\\"+worldName+"\\playerActorX.pig","wb") as file:
+            file.write(bytes())
+            pickle.dump(player.left, file, pickle.HIGHEST_PROTOCOL)
+        with open("user\\worlds\\"+worldName+"\\playerActorY.pig","wb") as file:
+            file.write(bytes())
+            pickle.dump(player.top, file, pickle.HIGHEST_PROTOCOL)
+        with open("user\\worlds\\"+worldName+"\\gItems.pig","wb") as file:
+            file.write(bytes())
+            pickle.dump(groundItems, file, pickle.HIGHEST_PROTOCOL)
+
 
 def on_key_down(key):
     global thatKey
@@ -213,17 +396,18 @@ def on_key_up(key):
     if key in thatKey:
         thatKey.remove(key)
     
-def tickAll(world, taX, inventory):
+def tickAll(world, taX, inventory, groundItems):
+    taX = int(taX)
     currentDark = 0
     for taY in range(0, worldHeight):
-        if getattr(blocks, world[(taX, taY)].type).hasUp == True:
-            world = tick(world, taX, taY, inventory)
+        if getattr(blocks, getWorldType(world, taX, taY)).hasUp:
+            world, groundItems = tick(world, taX, taY, inventory, groundItems)
         world[(taX, taY)].darkness = currentDark
         if world[(taX, taY)].solid:
             currentDark += 1
     taX += 1
     if taX == worldWidth: taX = 0
-    return world, taX, inventory
+    return world, taX, inventory, groundItems
 
 def isCollide(world, x, y, xB, yB):
     xB -= 1
@@ -249,11 +433,13 @@ def on_mouse_down(button, pos):
     global world
     global taX
     global inventory
+    global groundItems
 
     if button == mouse.LEFT and not menuOpen:
         sounds.thump.play()
-        addBlock(world, inventory, selBlockStr, mousePos[0], mousePos[1])
-        world, taX, inventory = tickAll(world, mousePos[0]//8, inventory)
+        usePos = ( (mousePos[0]+scrollX)//8, (mousePos[1]+scrollY)//8 )
+        addBlock(world, inventory, selBlockStr, usePos[0], usePos[1])
+        world, taX, inventory, groundItems = tickAll(world, usePos[0], inventory, groundItems)
 
     elif button == mouse.LEFT and menuOpen:
         for button in menu.buttons:
@@ -263,11 +449,14 @@ def on_mouse_down(button, pos):
 
     elif button == mouse.RIGHT and not menuOpen:
         sounds.pick1.play()
-        if world[(mousePos[0]//8, mousePos[1]//8)].type != "air":
-            selBlockStr = world[(mousePos[0]//8, mousePos[1]//8)].type
+        usePos = ( (mousePos[0]+scrollX)//8, (mousePos[1]+scrollY)//8 )
+        if world[usePos].type != "air":
+            selBlockStr = world[usePos].type
             selBlock = getattr(blocks, selBlockStr)
-        removeBlock(world, inventory, mousePos[0], mousePos[1])
-        world, taX, inventory = tickAll(world, mousePos[0]//8, inventory)
+            world[usePos].durability -= 1
+            if world[usePos].durability == 0:
+                removeBlock(world, groundItems, usePos[0], usePos[1])
+        world, taX, inventory, groundItems = tickAll(world, usePos[0], inventory, groundItems)
 
     elif button == mouse.WHEEL_UP:
         selNo += 1
@@ -291,9 +480,13 @@ def on_mouse_down(button, pos):
 
 #World gen --
 random.seed(seed)
-heightMap = {0:int(worldHeight/2)}
+heightMap = { 0:worldHeight//2 }
 for x in range(1, worldWidth):
     heightMap[x] = random.randint(heightMap[x-1]-1, heightMap[x-1]+1)
+    if heightMap[x] > (worldHeight//4)*3:
+        heightMap[x] = (worldHeight//4)*3
+    elif heightMap[x] < worldHeight//4:
+        heightMap[x] = worldHeight//4
 
 def appIf(x, y): #X, Y in blocks not pixels
     global halfTrueThing
@@ -328,7 +521,7 @@ for x in range(0, worldWidth):
             world[(x, y)] = newBlock
         else:
             world[(x, y)] = blocks.air()
-        tick(world, x, y, inventory)
+        tick(world, x, y, inventory, groundItems)
 #Water --
 for x in range(0, worldWidth):
     for y in range(0, worldHeight):
@@ -337,7 +530,7 @@ for x in range(0, worldWidth):
 #Settle Water --
 for i in range(0,25):
     for taX in range(0, worldWidth):
-        world,taX,inventory = tickAll(world, taX, inventory)
+        world,taX,inventory,groundItems = tickAll(world, taX, inventory, groundItems)
 #Sandify --
 for x in range(0, worldWidth):
     for y in range(0, worldHeight):
@@ -347,7 +540,7 @@ for x in range(0, worldWidth):
 #Add ore --
 for x in range(0, worldWidth):
     for y in range(0, worldHeight):
-        if getWorldType(world, x, y) == "stone" and random.choice([True,False,False,False,False,False,False,False]):
+        if getWorldType(world, x, y) == "stone" and random.randint(0,20)==0:
             world[x,y] = blocks.ore()
 #Trees --
 for x in range(0, worldWidth):
@@ -365,6 +558,15 @@ for x in range(0, worldWidth):
     for y in range(0, worldHeight):
         if getWorldType(world, x, y) == "grass" and getWorldType(world, x, y-1) == "air" and random.randint(0,3)==0:
             world[(x, y)] = blocks.flower()
+#Top hat --
+addedTopHat = False
+while addedTopHat == False:
+    x = random.randint(0,worldWidth-1)
+    y = random.randint(0,worldHeight-1)
+    if getWorldType(world, x, y) == "air" and isSolid(world, x, y+1):
+        #world[x, y] = blocks.top_hat()
+        addedTopHat = True
+
 
 
 
