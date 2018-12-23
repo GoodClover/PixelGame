@@ -1,4 +1,5 @@
 import os
+import sys
 try:
     import pygame
     import pgzrun
@@ -14,6 +15,7 @@ except:
     import pickle
     import easygui
 import random
+import time
 
 from functions import *
 import blocks
@@ -26,6 +28,7 @@ seed = random.randint(0, 999999)#input("Seed:")
 worldWidth  = 200
 worldHeight = 50
 shaders = False #Very slow
+blob = True
 HEIGHT = 300 #If the games slow change this e.g 1080 is 1080p
 drawBG = True
 rowsPerUpdate = 30
@@ -84,6 +87,10 @@ blocksStr = [
     "water",
     "flower",
     "top_hat",
+    "clock",
+    "piston",
+    "sign",
+    "debug",
     ] #All types of block need to be in here!!!
 blocksClass = []
 for item in blocksStr:
@@ -94,6 +101,7 @@ selBlock = blocks.dirt
 selBlockStr = "dirt"
 
 inventory = {}
+totalInventory = 0
 for item in blocksStr:
     try: inventory[item]
     except KeyError:
@@ -132,10 +140,15 @@ def draw():
                 if drawAir or world[(x, y)].type != "air":
                     if ((y*8)-scrollY > -8) and ((y*8)-scrollY < HEIGHT+8):
                         if ((x*8)-scrollX > -8) and ((x*8)-scrollX < WIDTH+8):
-                            screen.blit(world[(x, y)].type, ( (x*8)-scrollX, (y*8)-scrollY) )
+                            if blob: #Blob --
+                                #screen.blit("blob\\"+str(world[(x, y)].blob), ( (x*8)-scrollX, (y*8)-scrollY) )
+                                try: screen.blit(world[(x, y)].type+"\\"+str(world[(x, y)].blob), ( (x*8)-scrollX, (y*8)-scrollY) )
+                                except: screen.blit(world[(x, y)].type, ( (x*8)-scrollX, (y*8)-scrollY) )
+                            else:
+                                screen.blit(world[(x, y)].type, ( (x*8)-scrollX, (y*8)-scrollY) )
                             if world[(x, y)].durability < world[(x, y)].maxDurability and world[(x, y)].durability >= 0:
                                 screen.blit("dura"+str(world[(x, y)].durability), ( (x*8)-scrollX, (y*8)-scrollY) )
-                            if shaders:                                        #Shaders
+                            if shaders: #Shaders --
                                 for i in range(1, world[(x, y)].darkness//3):
                                     screen.blit("darkness", ( (x*8)-scrollX, (y*8)-scrollY) )
 
@@ -165,7 +178,19 @@ def draw():
             if round(t,1) % 3 == 0: screen.blit("eyelid-r", (player.left-scrollX-1, player.top-scrollY-1))
         if inventory["top_hat"] == 1: screen.blit("top_hat", (player.left-scrollX-1, player.top-scrollY-4-1))
 
+    global menuOpenDelay       #Screenshot
+    if keys.F11 in thatKey and menuOpenDelay <= 0:
+        menuOpenDelay = 0.2
+        cTime = time.ctime()
+        cTime = cTime.replace(":",";")
+        cTime = cTime[:10]+" - "+cTime[11:]
+        pygame.image.save(screen.surface, "screenshots\\screenshot - "+cTime+".png")
+        #screenshot - DDD MMM DD - HH;MM;SS YYYY
+        #screenshot - Mon Jan 01 - 13;30;59 2018.png
+        #Semicolons because colons arent allowed in Windows
 
+    #GUI things
+    if not menuOpen:
         screen.blit("sel_box", (6, 30))               #Selected block
         screen.blit(selBlockStr, (8, 32))
         screen.draw.text(str(inventory[selBlockStr])+" "+selBlockStr, (22, 28), FONT, FONT_SIZE, color=FONT_COLOUR)
@@ -186,6 +211,8 @@ def draw():
         zoomSurface.blit(pygame.transform.scale( preZoomSurface, (32,32) ), (0,0))
         screen.blit(zoomSurface, (mousePos[0]+6+3, mousePos[1]-6-32+2))
     screen.blit("cursor", (mousePos[0]-6, mousePos[1]-6))
+    if getWorldType(world, (mousePos[0]+scrollX)//8, (mousePos[1]+scrollY)//8 ) == "sign":
+        screen.draw.text(world[(mousePos[0]+scrollX)//8, (mousePos[1]+scrollY)//8].text, (mousePos[0]+7, mousePos[1]-3), FONT, FONT_SIZE, color=FONT_COLOUR)
 
     screen.draw.text("FPS: "+str(int(fps)), (8, 46), FONT, FONT_SIZE, color=FONT_COLOUR)      #FPS
     #screen.blit("debug", (int(player.left-scrollX), int(player.top-scrollY)))
@@ -215,6 +242,11 @@ def update(dt):
     global facingLeft
     global clouds
     global zoomWindow
+    global cursorBox
+    global noGrav
+    global blob
+    global selNo, selBlockStr, selBlock
+    global totalInventory
 
     t += dt
     f += 1
@@ -229,6 +261,17 @@ def update(dt):
     menuOpenDelay  -= dt
 
     dt += 1 #Temporary so the equations work a little nicer
+
+    totalInventory = 0
+    for i in inventory:
+        totalInventory += inventory[i]
+
+    #if inventory[selBlockStr] == 0 and totalInventory > 0:
+    #    selNo += 1
+    #    if selNo > blocksAmt:
+    #        selNo = 0
+    #    selBlock = blocksClass[selNo]
+    #    selBlockStr = blocksStr[selNo]
 
     for taX in range(taX, taX+rowsPerUpdate):
         ptaX = taX
@@ -323,18 +366,18 @@ def update(dt):
 
     #Is Stuck check --
     if isCollide(world, player.left, player.top, player.right, player.bottom):
-        player.left -= pXVel*1.5
-        player.top -= pYVel*1.5
+        player.left -= pXVel*dt*1.5
+        player.top -= pYVel*dt*1.5
         pXVel = 0
         pYVel = 0
 
-    if keys.R in thatKey:
+    if keys.F6 in thatKey:
         for bX in range(0, worldWidth):
             for bY in range(0, worldHeight):
                 removeBlock(world, groundItems, bX, bY)
         for gItem in groundItems:
             gItem.pos = (player.left, HEIGHT)
-    if keys.E in thatKey and menuOpenDelay <= 0:
+    if keys.G in thatKey and menuOpenDelay <= 0:
         menuOpenDelay = 0.2
         menuOpen = not menuOpen
 
@@ -347,19 +390,22 @@ def update(dt):
                 groundItems.append( groundItem( (player.left+12, player.top), selBlockStr ) )
             inventory[selBlockStr] -= 1
 
-    if keys.C in thatKey and menuOpenDelay <= 0:
+    if keys.E in thatKey and menuOpenDelay <= 0:
         menuOpenDelay = 0.2
-        toCraft = easygui.enterbox("What to craft: ")
-        howMany = easygui.enterbox("How many: ")
+        toCraft = easygui.enterbox("What to craft: ", TITLE+" - Crafting")
+        howMany = easygui.enterbox("How many: ", TITLE+" - Crafting")
         if howMany == "":
-            howMany = 0
+            howMany = 1
         howMany = int(howMany)
-        for i in range(0,howMany):
-            inventory = craft(toCraft, inventory)
+        inventory = craft(toCraft, inventory, howMany)
 
     if keys.LSHIFT in thatKey and menuOpenDelay <= 0:
         menuOpenDelay = 0.2
         zoomWindow = not zoomWindow
+
+    if keys.LCTRL in thatKey and menuOpenDelay <= 0:
+        menuOpenDelay = 0.2
+        cursorBox = not cursorBox
 
     if keys.O in thatKey:                                           #Save/Load worlds --
         worldName = "Test_World"
@@ -393,6 +439,18 @@ def update(dt):
             file.write(bytes())
             pickle.dump(groundItems, file, pickle.HIGHEST_PROTOCOL)
 
+    if keys.SLASH in thatKey:
+        commandStr = easygui.enterbox("Commands", "PixelGame - Cheaty menu")
+        command = commandStr.split()
+        if command[0] == "give":
+            inventory[command[1]] += int(command[2])
+        elif command[0] == "fly":
+            noGrav = not noGrav
+        elif command[0] == "blob":
+            blob = not blob
+        else:
+            easygui.msgbox("Invalid command", "PixelGame - Cheaty menu")
+
 
 def on_key_down(key):
     global thatKey
@@ -413,6 +471,17 @@ def tickAll(world, taX, inventory, groundItems):
         world[(taX, taY)].darkness = currentDark
         if world[(taX, taY)].solid:
             currentDark += 1
+        #Blob -\
+        world[(taX, taY)].blob = 0
+        if getWorld(world, taX, taY-1):
+            world[(taX, taY)].blob += 1
+        if getWorld(world, taX+1, taY):
+            world[(taX, taY)].blob += 2
+        if getWorld(world, taX, taY+1):
+            world[(taX, taY)].blob += 4
+        if getWorld(world, taX-1, taY):
+            world[(taX, taY)].blob += 8
+        #Blob _/
     taX += 1
     if taX == worldWidth: taX = 0
     return world, taX, inventory, groundItems
@@ -466,18 +535,32 @@ def on_mouse_down(button, pos):
                 removeBlock(world, groundItems, usePos[0], usePos[1])
         world, taX, inventory, groundItems = tickAll(world, usePos[0], inventory, groundItems)
 
+
     elif button == mouse.WHEEL_UP:
         selNo += 1
         if selNo > blocksAmt:
             selNo = 0
         selBlock = blocksClass[selNo]
         selBlockStr = blocksStr[selNo]
+        while inventory[selBlockStr] == 0 and totalInventory > 0:
+            selNo += 1
+            if selNo > blocksAmt:
+                selNo = 0
+            selBlock = blocksClass[selNo]
+            selBlockStr = blocksStr[selNo]
+
     elif button == mouse.WHEEL_DOWN:
         selNo -= 1
         if selNo == -1:
             selNo = blocksAmt
         selBlock = blocksClass[selNo]
         selBlockStr = blocksStr[selNo]
+        while inventory[selBlockStr] == 0 and totalInventory > 0:
+            selNo -= 1
+            if selNo == -1:
+                selNo = blocksAmt
+            selBlock = blocksClass[selNo]
+            selBlockStr = blocksStr[selNo]
 
 
 
