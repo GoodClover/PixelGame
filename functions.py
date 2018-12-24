@@ -67,9 +67,11 @@ class groundItem():
         self.type = itemType
 
 def removeBlock(world, groundItems, x, y):
-    if world[(x, y)].type != "air":
-        groundItems.append( groundItem( ( (x*8)+random.randint(-4,4), (y*8)+random.randint(-4,4), ), getWorldType(world,x,y)) )
-        world[(x, y)] = blocks.air()    
+    try:
+        if world[(x, y)].type != "air":
+            groundItems.append( groundItem( ( (x*8)+random.randint(-4,4), (y*8)+random.randint(-4,4), ), getWorldType(world,x,y)) )
+            world[(x, y)] = blocks.air() 
+    except: pass   
 
 recipies = {
     "tap":["ore","ore"],
@@ -77,9 +79,10 @@ recipies = {
     "wall":["planks"],
     "chest":["planks","planks","planks"],
     "ladders":["planks"],
-    "battery":["ore","planks"],
-    "piston":["battery","planks"],
+    "clock":["ore","planks"],
+    "piston":["clock","planks"],
     "sign":["planks"],
+    "tnt":["ore","planks"],
 }
 def craft(toCraft, inventory, amt=1):
     toCraft=toCraft.lower()

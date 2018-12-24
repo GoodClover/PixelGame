@@ -1,3 +1,15 @@
+logo ="""
+     _____ _          _  _____
+    |  __ (_)        | |/ ____|
+    | |__) |__  _____| | |  __  __ _ _ __ ___   ___
+    |  ___/ \\ \\/ / _ \\ | | |_ |/ _` | '_ ` _ \\ / _ \\
+    | |   | |>  <  __/ | |__| | (_| | | | | | |  __/
+    |_|   |_/_/\\_\\___|_|\\_____|\\__,_|_| |_| |_|\\___|
+      By  Oliver Simmons
+    """
+
+#Scroll down for options
+
 import os
 import sys
 try:
@@ -24,10 +36,11 @@ import menus
 import entities
 
 #Options------------------------#
-seed = random.randint(0, 999999)#input("Seed:")
+seed = easygui.enterbox("Seed: ", "PixelGame - World Gen")
 worldWidth  = 200
 worldHeight = 50
 shaders = False #Very slow
+transparency = True
 blob = True
 HEIGHT = 300 #If the games slow change this e.g 1080 is 1080p
 drawBG = True
@@ -90,11 +103,28 @@ blocksStr = [
     "clock",
     "piston",
     "sign",
+    "tnt",
     "debug",
     ] #All types of block need to be in here!!!
 blocksClass = []
+blocksImage = {}
+blocksBlob = {}
 for item in blocksStr:
     blocksClass.append(getattr(blocks, item))
+    if transparency:
+        blocksImage[item] = pygame.image.load("images\\"+item+".png").convert_alpha()
+        try:
+            for i in range(0,16):
+                blocksBlob[item,i] = pygame.image.load("images\\"+item+"\\"+str(i)+".png").convert_alpha()
+        except: pass
+    else:
+        blocksImage[item] = pygame.image.load("images\\"+item+".png").convert()
+        try:
+            for i in range(0,16):
+                blocksBlob[item,i] = pygame.image.load("images\\"+item+"\\"+str(i)+".png").convert()
+        except: pass
+darkness = pygame.image.load("images\\darkness.png").convert_alpha()
+
 blocksAmt = len(blocksStr)-1
 selNo = 0
 selBlock = blocks.dirt
@@ -142,15 +172,15 @@ def draw():
                         if ((x*8)-scrollX > -8) and ((x*8)-scrollX < WIDTH+8):
                             if blob: #Blob --
                                 #screen.blit("blob\\"+str(world[(x, y)].blob), ( (x*8)-scrollX, (y*8)-scrollY) )
-                                try: screen.blit(world[(x, y)].type+"\\"+str(world[(x, y)].blob), ( (x*8)-scrollX, (y*8)-scrollY) )
-                                except: screen.blit(world[(x, y)].type, ( (x*8)-scrollX, (y*8)-scrollY) )
+                                try: screen.blit( blocksBlob[world[(x, y)].type, world[(x, y)].blob] , ( (x*8)-scrollX, (y*8)-scrollY) )
+                                except: screen.blit( blocksImage[world[(x, y)].type] , ( (x*8)-scrollX, (y*8)-scrollY) )
                             else:
-                                screen.blit(world[(x, y)].type, ( (x*8)-scrollX, (y*8)-scrollY) )
+                                screen.blit( blocksImage[world[(x, y)].type] , ( (x*8)-scrollX, (y*8)-scrollY) )
                             if world[(x, y)].durability < world[(x, y)].maxDurability and world[(x, y)].durability >= 0:
                                 screen.blit("dura"+str(world[(x, y)].durability), ( (x*8)-scrollX, (y*8)-scrollY) )
                             if shaders: #Shaders --
                                 for i in range(1, world[(x, y)].darkness//3):
-                                    screen.blit("darkness", ( (x*8)-scrollX, (y*8)-scrollY) )
+                                    screen.blit(darkness, ( (x*8)-scrollX, (y*8)-scrollY) )
 
         for dust in dustParticles:
             pos = (dust[0]-scrollX, dust[1]-scrollY)
@@ -247,6 +277,8 @@ def update(dt):
     global blob
     global selNo, selBlockStr, selBlock
     global totalInventory
+    global shaders
+    global transparency
 
     t += dt
     f += 1
@@ -408,34 +440,34 @@ def update(dt):
         cursorBox = not cursorBox
 
     if keys.O in thatKey:                                           #Save/Load worlds --
-        worldName = "Test_World"
-        with open("user\\worlds\\"+worldName+"\\level.pig","rb") as file:
+        worldName = easygui.diropenbox("Open: ", "PixelGame - Open", "user\\worlds") #"Test_World"
+        with open(worldName+"\\level.pig","rb") as file:
             world = pickle.load(file)
-        with open("user\\worlds\\"+worldName+"\\inventory.pig","rb") as file:
+        with open(worldName+"\\inventory.pig","rb") as file:
             pickledFile = pickle.load(file)
             for type in pickledFile:
                 inventory[type] = pickledFile[type]
-        with open("user\\worlds\\"+worldName+"\\playerActorX.pig","rb") as file:
+        with open(worldName+"\\playerActorX.pig","rb") as file:
             player.left = pickle.load(file)
-        with open("user\\worlds\\"+worldName+"\\playerActorY.pig","rb") as file:
+        with open(worldName+"\\playerActorY.pig","rb") as file:
             player.top = pickle.load(file)
-        with open("user\\worlds\\"+worldName+"\\gItems.pig","rb") as file:
+        with open(worldName+"\\gItems.pig","rb") as file:
             groundItems = pickle.load(file)
     elif keys.P in thatKey:
-        worldName = "Test_World"
-        with open("user\\worlds\\"+worldName+"\\level.pig","wb") as file:
+        worldName = easygui.diropenbox("Open: ", "PixelGame - Open", "user\\worlds") #"Test_World"
+        with open(worldName+"\\level.pig","wb") as file:
             file.write(bytes())
             pickle.dump(world, file, pickle.HIGHEST_PROTOCOL)
-        with open("user\\worlds\\"+worldName+"\\inventory.pig","wb") as file:
+        with open(worldName+"\\inventory.pig","wb") as file:
             file.write(bytes())
             pickle.dump(inventory, file, pickle.HIGHEST_PROTOCOL)
-        with open("user\\worlds\\"+worldName+"\\playerActorX.pig","wb") as file:
+        with open(worldName+"\\playerActorX.pig","wb") as file:
             file.write(bytes())
             pickle.dump(player.left, file, pickle.HIGHEST_PROTOCOL)
-        with open("user\\worlds\\"+worldName+"\\playerActorY.pig","wb") as file:
+        with open(worldName+"\\playerActorY.pig","wb") as file:
             file.write(bytes())
             pickle.dump(player.top, file, pickle.HIGHEST_PROTOCOL)
-        with open("user\\worlds\\"+worldName+"\\gItems.pig","wb") as file:
+        with open(worldName+"\\gItems.pig","wb") as file:
             file.write(bytes())
             pickle.dump(groundItems, file, pickle.HIGHEST_PROTOCOL)
 
@@ -448,6 +480,23 @@ def update(dt):
             noGrav = not noGrav
         elif command[0] == "blob":
             blob = not blob
+        elif command[0] == "transparency":
+            transparency = not transparency
+            for item in blocksStr:
+                if transparency:
+                    blocksImage[item] = pygame.image.load("images\\"+item+".png").convert_alpha()
+                    try:
+                        for i in range(0,16):
+                            blocksBlob[item,i] = pygame.image.load("images\\"+item+"\\"+str(i)+".png").convert_alpha()
+                    except: pass
+                else:
+                    blocksImage[item] = pygame.image.load("images\\"+item+".png").convert()
+                    try:
+                        for i in range(0,16):
+                            blocksBlob[item,i] = pygame.image.load("images\\"+item+"\\"+str(i)+".png").convert()
+                    except: pass
+        elif command[0] == "shaders":
+            shaders = not shaders
         else:
             easygui.msgbox("Invalid command", "PixelGame - Cheaty menu")
 
@@ -535,6 +584,11 @@ def on_mouse_down(button, pos):
                 removeBlock(world, groundItems, usePos[0], usePos[1])
         world, taX, inventory, groundItems = tickAll(world, usePos[0], inventory, groundItems)
 
+    elif button == mouse.MIDDLE and not menuOpen:
+        usePos = ( (mousePos[0]+scrollX)//8, (mousePos[1]+scrollY)//8 )
+        if world[usePos].type != "air":
+            selBlockStr = world[usePos].type
+            selBlock = getattr(blocks, selBlockStr)
 
     elif button == mouse.WHEEL_UP:
         selNo += 1
@@ -618,10 +672,6 @@ for x in range(0, worldWidth):
     for y in range(0, worldHeight):
         if y >= worldHeight//2 and getWorldType(world, x, y) == "air" and y <= heightMap[x] and random.choice([True, True, True, False]):
             world[x, y] = blocks.water()
-#Settle Water --
-for i in range(0,25):
-    for taX in range(0, worldWidth):
-        world,taX,inventory,groundItems = tickAll(world, taX, inventory, groundItems)
 #Sandify --
 for x in range(0, worldWidth):
     for y in range(0, worldHeight):
@@ -663,5 +713,5 @@ while addedTopHat == False:
 
 
 
-print("\nPixelGame by GoodClover")
+print("\n"+logo)
 pgzrun.go() #Run the game

@@ -3,6 +3,7 @@ import random
 
 from functions import *
 import functions
+import pygame
 
 
 
@@ -70,6 +71,7 @@ class log(Block):
         super().__init__("log", True, 4, False)
     def update(pos, world, groundItems):
         if not (world[(pos[0], pos[1]+1)].type == "dirt" or world[(pos[0], pos[1]+1)].type == "grass" or world[(pos[0], pos[1]+1)].type == "log"):
+            pygame.mixer.Sound("sounds\\falllog.wav").play()
             functions.removeBlock(world, groundItems, pos[0], pos[1])
         elif world[pos[0], pos[1]+1].type == "dirt" and world[pos[0], pos[1]-1].type == "air" and random.randint(0, 50) == 0:
             world = functions.tree(world, pos)
@@ -131,12 +133,15 @@ class water(Block):
     def update(pos, world, groundItems):
         try:
             if world[pos[0], pos[1]+1].type == "air":
+                pygame.mixer.Sound("sounds\\waterpour.wav").play()
                 world[pos[0], pos[1]+1] = water()
                 world[pos] = air()
             elif world[pos[0]+1, pos[1]].type == "air" and world[pos[0]+1, pos[1]-1].type != "water":
+                #pygame.mixer.Sound("sounds\\waterpour.wav").play()
                 world[pos[0]+1, pos[1]] = water()
                 world[pos] = air()
             elif world[pos[0]-1, pos[1]].type == "air" and world[pos[0]-1, pos[1]-1].type != "water":
+                #pygame.mixer.Sound("sounds\\waterpour.wav").play()
                 world[pos[0]-1, pos[1]] = water()
                 world[pos] = air()
         except:
@@ -195,6 +200,7 @@ class piston(Block):
     def update(pos, world, groundItems):
         if functions.getWorldPower(world, pos[0]-1, pos[1]) or functions.getWorldPower(world, pos[0]+1, pos[1]) or functions.getWorldPower(world, pos[0], pos[1]-1) or functions.getWorldPower(world, pos[0], pos[1]+1):
             if functions.isSolid(world, pos[0]+1, pos[1]) and not functions.getWorld(world, pos[0]+2, pos[1]):
+                pygame.mixer.Sound("sounds\\piston.wav").play()
                 moveBlock = functions.getWorldLit(world, pos[0]+1, pos[1])
                 world[pos[0]+1, pos[1]] = air()
                 world[pos[0]+2, pos[1]] = moveBlock
@@ -206,7 +212,19 @@ class sign(Block):
         super().__init__("sign", False, 2, False)
         self.text = easygui.enterbox("Sign text: ", "PixelGame - New Sign")
 
-
+class tnt(Block):
+    hasUp = True
+    def __init__(self):
+        super().__init__("tnt", True, 1, False)
+    def update(pos, world, groundItems):
+        if functions.getWorldPower(world, pos[0]-1, pos[1]) or functions.getWorldPower(world, pos[0]+1, pos[1]) or functions.getWorldPower(world, pos[0], pos[1]-1) or functions.getWorldPower(world, pos[0], pos[1]+1):
+            pygame.mixer.Sound("sounds\\boom.wav").play()
+            world[pos] = air()
+            for xMod in range(-5,5):
+                for yMod in range(-5,5):
+                    if random.randint(0,4) != 0:
+                        functions.removeBlock(world, groundItems, pos[0]+xMod, pos[1]+yMod )
+        return world, groundItems
 
 
 
