@@ -2,9 +2,9 @@ logo ="""
      _____ _          _  _____
     |  __ (_)        | |/ ____|
     | |__) |__  _____| | |  __  __ _ _ __ ___   ___
-    |  ___/ \\ \\/ / _ \\ | | |_ |/ _` | '_ ` _ \\ / _ \\
+    |  ___/ / // / _ / | | |_ |/ _` | '_ ` _ / / _ /
     | |   | |>  <  __/ | |__| | (_| | | | | | |  __/
-    |_|   |_/_/\\_\\___|_|\\_____|\\__,_|_| |_| |_|\\___|
+    |_|   |_/_//_/___|_|/_____|/__,_|_| |_| |_|/___|
       By  Oliver Simmons
     """
 
@@ -42,6 +42,7 @@ worldHeight = 50
 shaders = False #Very slow
 transparency = True
 blob = True
+blobOthers = True
 HEIGHT = 300 #If the games slow change this e.g 1080 is 1080p
 drawBG = True
 rowsPerUpdate = 30
@@ -49,7 +50,6 @@ cursorBox = True
 drawAir = False #Ugly
 scroll = True
 noGrav = False
-topHat = True
 zoomWindow = True
 #Options------------------------#
 
@@ -104,6 +104,7 @@ blocksStr = [
     "piston",
     "sign",
     "tnt",
+    "pipe",
     "debug",
     ] #All types of block need to be in here!!!
 blocksClass = []
@@ -112,18 +113,18 @@ blocksBlob = {}
 for item in blocksStr:
     blocksClass.append(getattr(blocks, item))
     if transparency:
-        blocksImage[item] = pygame.image.load("images\\"+item+".png").convert_alpha()
+        blocksImage[item] = pygame.image.load("images/"+item+".png").convert_alpha()
         try:
             for i in range(0,16):
-                blocksBlob[item,i] = pygame.image.load("images\\"+item+"\\"+str(i)+".png").convert_alpha()
+                blocksBlob[item,i] = pygame.image.load("images/"+item+"/"+str(i)+".png").convert_alpha()
         except: pass
     else:
-        blocksImage[item] = pygame.image.load("images\\"+item+".png").convert()
+        blocksImage[item] = pygame.image.load("images/"+item+".png").convert()
         try:
             for i in range(0,16):
-                blocksBlob[item,i] = pygame.image.load("images\\"+item+"\\"+str(i)+".png").convert()
+                blocksBlob[item,i] = pygame.image.load("images/"+item+"/"+str(i)+".png").convert()
         except: pass
-darkness = pygame.image.load("images\\darkness.png").convert_alpha()
+darkness = pygame.image.load("images/darkness.png").convert_alpha()
 
 blocksAmt = len(blocksStr)-1
 selNo = 0
@@ -171,7 +172,7 @@ def draw():
                     if ((y*8)-scrollY > -8) and ((y*8)-scrollY < HEIGHT+8):
                         if ((x*8)-scrollX > -8) and ((x*8)-scrollX < WIDTH+8):
                             if blob: #Blob --
-                                #screen.blit("blob\\"+str(world[(x, y)].blob), ( (x*8)-scrollX, (y*8)-scrollY) )
+                                #screen.blit("blob/"+str(world[(x, y)].blob), ( (x*8)-scrollX, (y*8)-scrollY) )
                                 try: screen.blit( blocksBlob[world[(x, y)].type, world[(x, y)].blob] , ( (x*8)-scrollX, (y*8)-scrollY) )
                                 except: screen.blit( blocksImage[world[(x, y)].type] , ( (x*8)-scrollX, (y*8)-scrollY) )
                             else:
@@ -197,7 +198,7 @@ def draw():
                 screen.blit("player-s", (player.left-scrollX-1, player.top-scrollY-1))
             else: screen.blit("player", (player.left-scrollX-1, player.top-scrollY-1))
             screen.blit("arms", (player.left-scrollX-3-1, player.top-scrollY-1))
-            if round(t,1) % 3 == 0: screen.blit("eyelid", (player.left-scrollX-1, player.top-scrollY-1))
+            if int(t) % 3 == 0: screen.blit("eyelid", (player.left-scrollX-1, player.top-scrollY-1))
         elif pXVel > 0:
             if getWorldType(world, (player.left+4)//8, (player.top+17)//8) == "air":
                 screen.blit("player-r-j", (player.left-scrollX-1, player.top-scrollY-1))
@@ -205,7 +206,7 @@ def draw():
                 screen.blit("player-r-s", (player.left-scrollX-8-1, player.top-scrollY-1))
             else: screen.blit("player-r", (player.left-scrollX-1, player.top-scrollY-1))
             screen.blit("arms", (player.left-scrollX-3-1, player.top-scrollY-1))
-            if round(t,1) % 3 == 0: screen.blit("eyelid-r", (player.left-scrollX-1, player.top-scrollY-1))
+            if int(t) % 3 == 0: screen.blit("eyelid-r", (player.left-scrollX-1, player.top-scrollY-1))
         if inventory["top_hat"] == 1: screen.blit("top_hat", (player.left-scrollX-1, player.top-scrollY-4-1))
 
     global menuOpenDelay       #Screenshot
@@ -214,7 +215,7 @@ def draw():
         cTime = time.ctime()
         cTime = cTime.replace(":",";")
         cTime = cTime[:10]+" - "+cTime[11:]
-        pygame.image.save(screen.surface, "screenshots\\screenshot - "+cTime+".png")
+        pygame.image.save(screen.surface, "screenshots/screenshot - "+cTime+".png")
         #screenshot - DDD MMM DD - HH;MM;SS YYYY
         #screenshot - Mon Jan 01 - 13;30;59 2018.png
         #Semicolons because colons arent allowed in Windows
@@ -298,13 +299,6 @@ def update(dt):
     for i in inventory:
         totalInventory += inventory[i]
 
-    #if inventory[selBlockStr] == 0 and totalInventory > 0:
-    #    selNo += 1
-    #    if selNo > blocksAmt:
-    #        selNo = 0
-    #    selBlock = blocksClass[selNo]
-    #    selBlockStr = blocksStr[selNo]
-
     for taX in range(taX, taX+rowsPerUpdate):
         ptaX = taX
         if ptaX > worldWidth-1:
@@ -332,7 +326,7 @@ def update(dt):
             inventory[gItem.type] += 1
             groundItems.remove(gItem)
         elif isSolid(world, gItem.pos[0]//8, gItem.pos[1]//8) or isSolid(world, (gItem.pos[0]+7)//8, (gItem.pos[1]+7)//8) or isSolid(world, (gItem.pos[0]+7)//8, gItem.pos[1]//8) or isSolid(world, gItem.pos[0]//8, (gItem.pos[1]+7)//8):
-            gItem.pos = (gItem.pos[0], gItem.pos[1]-1)
+            gItem.pos = (gItem.pos[0]-1, gItem.pos[1]-1)
         elif isSolid(world, gItem.pos[0]//8, gItem.pos[1]//8)==False and isSolid(world, (gItem.pos[0]+8)//8, (gItem.pos[1]+8)//8)==False and isSolid(world, (gItem.pos[0]+8)//8, gItem.pos[1]//8)==False and isSolid(world, gItem.pos[0]//8, (gItem.pos[1]+8)//8)==False:
             gItem.pos = (gItem.pos[0], gItem.pos[1]+1)
 
@@ -440,34 +434,34 @@ def update(dt):
         cursorBox = not cursorBox
 
     if keys.O in thatKey:                                           #Save/Load worlds --
-        worldName = easygui.diropenbox("Open: ", "PixelGame - Open", "user\\worlds") #"Test_World"
-        with open(worldName+"\\level.pig","rb") as file:
+        worldName = easygui.diropenbox("Open: ", "PixelGame - Open", "user/worlds").replace("\\","/") #"Test_World"
+        with open(worldName+"/level.pig","rb") as file:
             world = pickle.load(file)
-        with open(worldName+"\\inventory.pig","rb") as file:
+        with open(worldName+"/inventory.pig","rb") as file:
             pickledFile = pickle.load(file)
             for type in pickledFile:
                 inventory[type] = pickledFile[type]
-        with open(worldName+"\\playerActorX.pig","rb") as file:
+        with open(worldName+"/playerActorX.pig","rb") as file:
             player.left = pickle.load(file)
-        with open(worldName+"\\playerActorY.pig","rb") as file:
+        with open(worldName+"/playerActorY.pig","rb") as file:
             player.top = pickle.load(file)
-        with open(worldName+"\\gItems.pig","rb") as file:
+        with open(worldName+"/gItems.pig","rb") as file:
             groundItems = pickle.load(file)
     elif keys.P in thatKey:
-        worldName = easygui.diropenbox("Open: ", "PixelGame - Open", "user\\worlds") #"Test_World"
-        with open(worldName+"\\level.pig","wb") as file:
+        worldName = easygui.diropenbox("Open: ", "PixelGame - Open", "user/worlds") #"Test_World"
+        with open(worldName+"/level.pig","wb") as file:
             file.write(bytes())
             pickle.dump(world, file, pickle.HIGHEST_PROTOCOL)
-        with open(worldName+"\\inventory.pig","wb") as file:
+        with open(worldName+"/inventory.pig","wb") as file:
             file.write(bytes())
             pickle.dump(inventory, file, pickle.HIGHEST_PROTOCOL)
-        with open(worldName+"\\playerActorX.pig","wb") as file:
+        with open(worldName+"/playerActorX.pig","wb") as file:
             file.write(bytes())
             pickle.dump(player.left, file, pickle.HIGHEST_PROTOCOL)
-        with open(worldName+"\\playerActorY.pig","wb") as file:
+        with open(worldName+"/playerActorY.pig","wb") as file:
             file.write(bytes())
             pickle.dump(player.top, file, pickle.HIGHEST_PROTOCOL)
-        with open(worldName+"\\gItems.pig","wb") as file:
+        with open(worldName+"/gItems.pig","wb") as file:
             file.write(bytes())
             pickle.dump(groundItems, file, pickle.HIGHEST_PROTOCOL)
 
@@ -484,19 +478,22 @@ def update(dt):
             transparency = not transparency
             for item in blocksStr:
                 if transparency:
-                    blocksImage[item] = pygame.image.load("images\\"+item+".png").convert_alpha()
+                    blocksImage[item] = pygame.image.load("images/"+item+".png").convert_alpha()
                     try:
                         for i in range(0,16):
-                            blocksBlob[item,i] = pygame.image.load("images\\"+item+"\\"+str(i)+".png").convert_alpha()
+                            blocksBlob[item,i] = pygame.image.load("images/"+item+"/"+str(i)+".png").convert_alpha()
                     except: pass
                 else:
-                    blocksImage[item] = pygame.image.load("images\\"+item+".png").convert()
+                    blocksImage[item] = pygame.image.load("images/"+item+".png").convert()
                     try:
                         for i in range(0,16):
-                            blocksBlob[item,i] = pygame.image.load("images\\"+item+"\\"+str(i)+".png").convert()
+                            blocksBlob[item,i] = pygame.image.load("images/"+item+"/"+str(i)+".png").convert()
                     except: pass
         elif command[0] == "shaders":
             shaders = not shaders
+        elif command[0] == "itemsHere":
+            for gItem in groundItems:
+                gItem.pos = (player.left, player.top)
         else:
             easygui.msgbox("Invalid command", "PixelGame - Cheaty menu")
 
@@ -521,15 +518,26 @@ def tickAll(world, taX, inventory, groundItems):
         if world[(taX, taY)].solid:
             currentDark += 1
         #Blob -\
-        world[(taX, taY)].blob = 0
-        if getWorld(world, taX, taY-1):
-            world[(taX, taY)].blob += 1
-        if getWorld(world, taX+1, taY):
-            world[(taX, taY)].blob += 2
-        if getWorld(world, taX, taY+1):
-            world[(taX, taY)].blob += 4
-        if getWorld(world, taX-1, taY):
-            world[(taX, taY)].blob += 8
+        if blobOthers:
+            world[(taX, taY)].blob = 0
+            if getWorld(world, taX, taY-1):
+                world[(taX, taY)].blob += 1
+            if getWorld(world, taX+1, taY):
+                world[(taX, taY)].blob += 2
+            if getWorld(world, taX, taY+1):
+                world[(taX, taY)].blob += 4
+            if getWorld(world, taX-1, taY):
+                world[(taX, taY)].blob += 8
+        else:
+            world[(taX, taY)].blob = 0
+            if getWorldType(world, taX, taY-1) == world[(taX, taY)].type:
+                world[(taX, taY)].blob += 1
+            if getWorldType(world, taX+1, taY) == world[(taX, taY)].type:
+                world[(taX, taY)].blob += 2
+            if getWorldType(world, taX, taY+1) == world[(taX, taY)].type:
+                world[(taX, taY)].blob += 4
+            if getWorldType(world, taX-1, taY) == world[(taX, taY)].type:
+                world[(taX, taY)].blob += 8
         #Blob _/
     taX += 1
     if taX == worldWidth: taX = 0

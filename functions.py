@@ -83,6 +83,7 @@ recipies = {
     "piston":["clock","planks"],
     "sign":["planks"],
     "tnt":["ore","planks"],
+    "pig":["flower","flower"],
 }
 def craft(toCraft, inventory, amt=1):
     toCraft=toCraft.lower()

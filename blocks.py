@@ -226,6 +226,11 @@ class tnt(Block):
                         functions.removeBlock(world, groundItems, pos[0]+xMod, pos[1]+yMod )
         return world, groundItems
 
+class pipe(Block):
+    hasUp = False
+    def __init__(self):
+        super().__init__("pipe", True, 3, False)
+
 
 
 
