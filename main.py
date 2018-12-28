@@ -32,7 +32,6 @@ import time
 from functions import *
 import blocks
 from blocks import Block
-import menus
 import entities
 
 #Options------------------------#
@@ -42,7 +41,7 @@ worldHeight = 50
 shaders = False #Very slow
 transparency = True
 blob = True
-blobOthers = True
+blobOthers = False
 HEIGHT = 300 #If the games slow change this e.g 1080 is 1080p
 drawBG = True
 rowsPerUpdate = 30
@@ -60,8 +59,6 @@ ICON = "icons/devIcon.png"
 FONT, FONT_SIZE, FONT_COLOUR = "pocket_pixel", 16, (25, 25, 25)
 
 pygame.mouse.set_visible(False)
-
-menu = menus.testMenu()
 
 t = 0
 f = 0
@@ -226,7 +223,7 @@ def draw():
         screen.blit(selBlockStr, (8, 32))
         screen.draw.text(str(inventory[selBlockStr])+" "+selBlockStr, (22, 28), FONT, FONT_SIZE, color=FONT_COLOUR)
     elif menuOpen:
-        screen.blit(menu.image, menu.pos)
+        pass ################################
 
     for i in range(0, int(pHealth)*8, 8):         #Health meter
         screen.blit("health_meter.png", (8+i, 8))
@@ -275,7 +272,7 @@ def update(dt):
     global zoomWindow
     global cursorBox
     global noGrav
-    global blob
+    global blob, blobOthers
     global selNo, selBlockStr, selBlock
     global totalInventory
     global shaders
@@ -474,6 +471,8 @@ def update(dt):
             noGrav = not noGrav
         elif command[0] == "blob":
             blob = not blob
+        elif command[0] == "blobOthers":
+            blobOthers = not blobOthers
         elif command[0] == "transparency":
             transparency = not transparency
             for item in blocksStr:
@@ -497,17 +496,6 @@ def update(dt):
         else:
             easygui.msgbox("Invalid command", "PixelGame - Cheaty menu")
 
-
-def on_key_down(key):
-    global thatKey
-    thatKey.append(key)
-            
-
-def on_key_up(key):
-    global thatKey
-    if key in thatKey:
-        thatKey.remove(key)
-    
 def tickAll(world, taX, inventory, groundItems):
     taX = int(taX)
     currentDark = 0
@@ -530,19 +518,28 @@ def tickAll(world, taX, inventory, groundItems):
                 world[(taX, taY)].blob += 8
         else:
             world[(taX, taY)].blob = 0
-            if getWorldType(world, taX, taY-1) == world[(taX, taY)].type:
+            if isSolid(world, taX, taY-1) == isSolid(world, taX, taY) and getWorldType(world, taX, taY-1) != "air":
                 world[(taX, taY)].blob += 1
-            if getWorldType(world, taX+1, taY) == world[(taX, taY)].type:
+            if isSolid(world, taX+1, taY) == isSolid(world, taX, taY) and getWorldType(world, taX+1, taY) != "air":
                 world[(taX, taY)].blob += 2
-            if getWorldType(world, taX, taY+1) == world[(taX, taY)].type:
+            if isSolid(world, taX, taY+1) == isSolid(world, taX, taY) and getWorldType(world, taX, taY+1) != "air":
                 world[(taX, taY)].blob += 4
-            if getWorldType(world, taX-1, taY) == world[(taX, taY)].type:
+            if isSolid(world, taX-1, taY) == isSolid(world, taX, taY) and getWorldType(world, taX-1, taY) != "air":
                 world[(taX, taY)].blob += 8
-        #Blob _/
     taX += 1
     if taX == worldWidth: taX = 0
     return world, taX, inventory, groundItems
 
+def on_key_down(key):
+    global thatKey
+    thatKey.append(key)
+            
+
+def on_key_up(key):
+    global thatKey
+    if key in thatKey:
+        thatKey.remove(key)
+    
 def isCollide(world, x, y, xB, yB):
     xB -= 1
     yB -= 1
@@ -574,12 +571,6 @@ def on_mouse_down(button, pos):
         usePos = ( (mousePos[0]+scrollX)//8, (mousePos[1]+scrollY)//8 )
         addBlock(world, inventory, selBlockStr, usePos[0], usePos[1])
         world, taX, inventory, groundItems = tickAll(world, usePos[0], inventory, groundItems)
-
-    elif button == mouse.LEFT and menuOpen:
-        for button in menu.buttons:
-            if pos[0] > button.pos[0] and pos[0] < button.pos[0]+button.w:
-                if pos[1] > button.pos[1] and pos[1] < button.pos[1]+button.h:
-                    button.code()
 
     elif button == mouse.RIGHT and not menuOpen:
         sounds.pick1.play()

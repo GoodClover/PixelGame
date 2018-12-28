@@ -227,9 +227,25 @@ class tnt(Block):
         return world, groundItems
 
 class pipe(Block):
-    hasUp = False
+    hasUp = True
     def __init__(self):
         super().__init__("pipe", True, 3, False)
+        self.hasWater = False
+    def update(pos, world, groundItems):
+        if world[pos].hasWater:
+            if not functions.getWorld(world, pos[0], pos[1]-1):
+                world[pos].hasWater = False
+                world[pos[0], pos[1]-1] = water()
+            elif functions.getWorldType(world, pos[0], pos[1]-1) == "pipe":
+                if not world[pos[0], pos[1]-1].hasWater:
+                    world[pos[0], pos[1]-1].hasWater = True
+                    world[pos].hasWater = False
+        elif not world[pos].hasWater:
+            if functions.getWorldType(world, pos[0], pos[1]+1) == "water":
+                world[pos].hasWater = True
+                world[pos[0], pos[1]+1] = air()
+
+        return world, groundItems
 
 
 
