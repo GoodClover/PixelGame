@@ -1,15 +1,11 @@
-logo ="""
-     _____ _          _  _____
-    |  __ (_)        | |/ ____|
-    | |__) |__  _____| | |  __  __ _ _ __ ___   ___
-    |  ___/ / // / _ / | | |_ |/ _` | '_ ` _ / / _ /
-    | |   | |>  <  __/ | |__| | (_| | | | | | |  __/
-    |_|   |_/_//_/___|_|/_____|/__,_|_| |_| |_|/___|
-      By  Oliver Simmons
-    """
+credits = "Error, \"credits.txt\" not found!"
+with open("credits.txt", "r") as file:
+    credits = file.read()
 
 #Scroll down for options
 
+#Librares
+print("Loading libraries...")
 import os
 import sys
 try:
@@ -17,15 +13,32 @@ try:
     import pgzrun
     import pickle
     import easygui
-except:
-    print("\nCan't find libraries! Installing now.\n")
-    os.system("pip3 install pgzero")
-    os.system("pip3 install pickle")
-    os.system("pip3 install easygui")
-    import pygame
-    import pgzrun
-    import pickle
-    import easygui
+except ImportError:
+    print("\nCan't find libraries!")
+    if input("Do you want to auto install them now? (Y/N)").upper() == "Y":
+        print("Installing libraries...")
+        try:
+            os.system("python -m pip install --upgrade pip")
+        except:
+            #This is incase that the command dosn't work
+            pass
+        os.system("pip3 install pgzero")
+        os.system("pip3 install pickle")
+        os.system("pip3 install easygui")
+        import pygame
+        import pgzrun
+        import pickle
+        import easygui
+        print("Installed libraries")
+    else:
+        print("\nIf you want to play they need to be intalled.")
+        print("""Libraries:
+         - "pgzero" (pygame included)
+         - "pickle"
+         - "easygui"
+        """)
+        input("Press enter to continue with the error...")
+        raise
 import random
 import time
 
@@ -34,8 +47,13 @@ import blocks
 from blocks import Block
 import entities
 
+#Loading
+print("Loaded libraries!")
+print("\n"+credits+"\n")
+print("Loading game...")
+
 #Options------------------------#
-seed = easygui.enterbox("Seed: ", "PixelGame - World Gen")
+seed = 0
 worldWidth  = 200
 worldHeight = 50
 shaders = False #Very slow
@@ -87,7 +105,7 @@ blocksStr = [
     "ore",
     "grass",
     "sand",
-    "log", 
+    "log",
     "planks",
     "wall",
     "ladders",
@@ -185,7 +203,7 @@ def draw():
             screen.draw.line(pos, pos, dust[4])
 
         for gItem in groundItems:
-            screen.blit(gItem.type, (gItem.pos[0]-scrollX, gItem.pos[1]-scrollY) ) 
+            screen.blit(gItem.type, (gItem.pos[0]-scrollX, gItem.pos[1]-scrollY) )
 
         #player.draw()                                              #Player
         if pXVel <= 0:
@@ -204,7 +222,7 @@ def draw():
             else: screen.blit("player-r", (player.left-scrollX-1, player.top-scrollY-1))
             screen.blit("arms", (player.left-scrollX-3-1, player.top-scrollY-1))
             if int(t) % 3 == 0: screen.blit("eyelid-r", (player.left-scrollX-1, player.top-scrollY-1))
-        if inventory["top_hat"] == 1: screen.blit("top_hat", (player.left-scrollX-1, player.top-scrollY-4-1))
+        if inventory["top_hat"] >= 1: screen.blit("top_hat", (player.left-scrollX-1, player.top-scrollY-4-1))
 
     global menuOpenDelay       #Screenshot
     if keys.F11 in thatKey and menuOpenDelay <= 0:
@@ -245,7 +263,7 @@ def draw():
     screen.draw.text("FPS: "+str(int(fps)), (8, 46), FONT, FONT_SIZE, color=FONT_COLOUR)      #FPS
     #screen.blit("debug", (int(player.left-scrollX), int(player.top-scrollY)))
 
-    
+
 
 def update(dt):
     global pAir
@@ -332,7 +350,7 @@ def update(dt):
     if pAir <= 0:
         pAir = 0
         pHealth -= 0.02
-    
+
     if keys.W in thatKey:
         if not noGrav:
             if getWorldType(world, (player.left+4)//8, (player.top//8)+1) == "water":
@@ -356,7 +374,7 @@ def update(dt):
         facingLeft = False
         if isSolid(world, (player.left+4)//8, (player.top+16)//8):
             dustParticles.append( ((scrollX+WIDTH/2)+random.randint(-2,6), (scrollY+HEIGHT/2)+14, 50, pXVel, screen.surface.get_at((int(player.left-scrollX+4), int(player.top-scrollY+17)))[:3] ))
-    
+
     if not noGrav:
         if getWorldType(world, (player.left+4)//8, (player.top//8)+1) == "water":
             pAir -=0.02
@@ -376,7 +394,7 @@ def update(dt):
     if isCollide(world, player.left, player.top + pYVel, player.right, player.bottom + pYVel):
         pYVel = 0
         jumpT = 0
-    
+
     #Applying Vels --
     player.left += pXVel*dt
     player.top += pYVel*dt
@@ -432,6 +450,7 @@ def update(dt):
 
     if keys.O in thatKey:                                           #Save/Load worlds --
         worldName = easygui.diropenbox("Open: ", "PixelGame - Open", "user/worlds").replace("\\","/") #"Test_World"
+        print("\nLoading world...")
         with open(worldName+"/level.pig","rb") as file:
             world = pickle.load(file)
         with open(worldName+"/inventory.pig","rb") as file:
@@ -444,8 +463,10 @@ def update(dt):
             player.top = pickle.load(file)
         with open(worldName+"/gItems.pig","rb") as file:
             groundItems = pickle.load(file)
+        print("Loaded world...")
     elif keys.P in thatKey:
-        worldName = easygui.diropenbox("Open: ", "PixelGame - Open", "user/worlds") #"Test_World"
+        worldName = easygui.diropenbox("Save: ", "PixelGame - Save", "user/worlds") #"Test_World"
+        print("\nSaving world...")
         with open(worldName+"/level.pig","wb") as file:
             file.write(bytes())
             pickle.dump(world, file, pickle.HIGHEST_PROTOCOL)
@@ -461,6 +482,7 @@ def update(dt):
         with open(worldName+"/gItems.pig","wb") as file:
             file.write(bytes())
             pickle.dump(groundItems, file, pickle.HIGHEST_PROTOCOL)
+        print("Saved world...")
 
     if keys.SLASH in thatKey:
         commandStr = easygui.enterbox("Commands", "PixelGame - Cheaty menu")
@@ -533,13 +555,13 @@ def tickAll(world, taX, inventory, groundItems):
 def on_key_down(key):
     global thatKey
     thatKey.append(key)
-            
+
 
 def on_key_up(key):
     global thatKey
     if key in thatKey:
         thatKey.remove(key)
-    
+
 def isCollide(world, x, y, xB, yB):
     xB -= 1
     yB -= 1
@@ -623,6 +645,7 @@ def on_mouse_down(button, pos):
 
 
 #World gen --
+seed = easygui.enterbox("Seed: ", "PixelGame - World Gen")
 random.seed(seed)
 heightMap = { 0:worldHeight//2 }
 for x in range(1, worldWidth):
@@ -644,7 +667,7 @@ def appIf(x, y): #X, Y in blocks not pixels
             gapChanceList.append(True)
     else:
         gapChanceList.append(False)
-    
+
 world = {}
 for x in range(0, worldWidth):
     for y in range(0, worldHeight):
@@ -704,7 +727,7 @@ while addedTopHat == False:
     x = random.randint(0,worldWidth-1)
     y = random.randint(0,worldHeight-1)
     if getWorldType(world, x, y) == "air" and isSolid(world, x, y+1):
-        #world[x, y] = blocks.top_hat()
+        world[x, y] = blocks.top_hat()
         addedTopHat = True
 
 
@@ -712,5 +735,5 @@ while addedTopHat == False:
 
 
 
-print("\n"+logo)
+print("Loaded!")
 pgzrun.go() #Run the game
