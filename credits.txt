@@ -5,10 +5,13 @@
     | |   | |>  <  __/ | |__| | (_| | | | | | |  __/
     |_|   |_/_/\_\___|_|\_____|\__,_|_| |_| |_|\___|
       By  Oliver Simmons
-     
 
-     
+
+
 Sounds:
 - "boom.wav" by My Brother
 - "waterpour.wav" by InspectorJ (www.jshaw.co.uk) of Freesound.org
-- "falllog.wav", "pick1.wav", "thump.wav" by Unknown
+- "falllog.wav", "pick1.wav", "thump.wav" by Unknown (If you want credit contact me)
+
+Contact:
+- oliversimmo@gmail.com
